@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+const path = require('path')
+const process = require('process')
+const formidable = require('formidable')
+const fs = require('fs')
+const nanoid = require('nanoid')
+
+let workPath = process.cwd()
+// 第一个参数必传，为 URL前缀，用于返回下载地址
+let prefix = process.argv[2]
+if (!prefix) {
+  process.exit(1)
+}
+
+// 在储存文件目录运行，或者通过参数传递。 默认端口号为 2789
+if (process.argv.length === 4) {
+  let inputPath = process.argv[3]
+  if (path.isAbsolute(inputPath)) {
+    workPath = inputPath
+  } else {
+    workPath = path.join(workPath, process.argv[3])
+  }
+  if (!fs.existsSync(workPath)) {
+    fs.mkdirSync(workPath)
+  }
+}
+
+const express = require('express')
+
+const app = express()
+app.use('/', express.static(path.join(__dirname, 'web')))
+
+app.post('/upload', function(req, res) {
+  // create an incoming form object
+  let form = new formidable.IncomingForm();
+  let fileName
+  form.on('file', function(field, file) {
+    let extension = ''
+    let splitted = file.name.split('.')
+    if (splitted.length > 0) {
+      extension = '.' + splitted[splitted.length - 1]
+    }
+    fileName = nanoid() + extension
+    fs.renameSync(file.path, path.join(workPath, fileName));
+  });
+  form.on('error', function(err) {
+    console.log('An error has occured: \n' + err);
+    res.json({error:'网络异常！！！'})
+  });
+  form.on('end', function() {
+    res.json({url: prefix + fileName})
+  });
+  form.parse(req);
+});
+
+let server = app.listen(2789, function () {
+  let host = server.address().address
+  let port = server.address().port
+  console.log('应用实例，访问地址为 http://%s:%s', host, port)
+})
