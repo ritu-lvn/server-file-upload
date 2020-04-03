@@ -3,8 +3,7 @@ var multer = require('multer');
 const app = express();
 var fs = require('fs');
 var filesArr = [];
-
-const port = process.env.PORT || 3000;
+var cors = require('cors')
 
 function getStandardResponse(status, message, data) {
     return {
@@ -16,26 +15,24 @@ function getStandardResponse(status, message, data) {
 
 var myStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, './uploads')
+        cb(null, './uploads');
     },
     filename: function (req, file, cb) {
         console.log("INSIDE FILENAME")
-        cb(null, file.originalname)
+        // cb(null, file.originalname)
+        cb(null, file.originalname);
     }
 })
 
 
 var uploader = multer({ storage: myStorage });
+app.use(cors());
 
+app.get('/', function(req, res) {
+    res.status(200).send('Welcome to file upload app');
+    return
 
-app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    next();
-});
-
-
+})
 
 //API to list the uploaded files
 app.get('/listfiles', function (req, res) {
@@ -64,7 +61,6 @@ app.get('/listfiles', function (req, res) {
 //API to upload the file
 app.post('/uploadfile', uploader.single('myFile'), function (req, res) {
 
-    console.log("CALLED");
     const fileToUpload = req.file
 
 
@@ -106,6 +102,9 @@ app.post('/uploadfile', uploader.single('myFile'), function (req, res) {
             res.status(400).send(getStandardResponse(false, 'File already exist in the database'));
             return
         }
+
+        console.log(fileExist);
+
         stringJson = JSON.stringify(fileObj);
         filesArr.push(JSON.parse(stringJson));
 
@@ -124,7 +123,7 @@ app.post('/uploadfile', uploader.single('myFile'), function (req, res) {
 
 
 //API to Delete a file
-app.delete('/deletefile/:id', function (req, res, next) {
+app.delete('/deletefile/:id', function (req, res) {
 
     const id = req.params.id;
     if (id) {
@@ -171,7 +170,7 @@ app.delete('/deletefile/:id', function (req, res, next) {
     }
 })
 
-app.listen(port, function(){
+app.listen(process.env.PORT || 3000, function () {
     console.log("Express server listening on port %d in %s mode", this.address().port, app.settings.env);
 });
-
+// app.listen(3000)
